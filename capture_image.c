@@ -11,6 +11,12 @@
 */
 /* Note: Set the switches SW1 and SW2 to high and rest of the switches to low for correct exposure timing while compiling and the loading the program in the Altera Monitor program.
 */
+
+/*
+TODO: add the tasks we need to implement
+TODO(Jay): Spell better
+*/
+
 int main(void)
 {
 	volatile int * KEY_ptr				= (int *) KEY_BASE;
