@@ -1,7 +1,8 @@
-#include "stdio.h"
-#include "stdlib.h"
-#include "stdbool.h"
-#include "string.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <time.h>
 
 #include "image.h"
 #include "callback.h"
@@ -25,11 +26,16 @@ static const transform_t transforms[] = {&mirror_y_transform, NULL};
 #define KEY_BASE              0xFF200050
 #define VIDEO_IN_BASE         0xFF203060
 #define FPGA_ONCHIP_BASE      0xC8000000
+#define CHAR_BUF_CTRL_BASE		0xFF203030
+#define FPGA_CHAR_START			0xC9000000
+
 
 static volatile int * KEY_ptr			= (int *) KEY_BASE; // key peripheral 
 static volatile int * Video_In_DMA_ptr	= (int *) VIDEO_IN_BASE; // the peripheral
 static volatile short * Video_Mem_ptr	= (short *) FPGA_ONCHIP_BASE; // vga output memory location
 
+static volatile int * video_char_ctrl0  = (int *) CHAR_BUF_CTRL_BASE; // the FPGA
+static volatile char * video_char_overlay0 = (char*) FPGA_CHAR_START; // the FPGA
 
 /// --- dma control and related callbacks ---
 
@@ -55,6 +61,28 @@ void toggle_dma() {
 	} else {
 		enable_dma(NULL);
 	}
+}
+
+/// --- screen formatting ---
+
+void set_photo_count(int count) {
+	char message[] = "photos: %0d";
+	snprintf(message, strlen(message), message, count);
+
+	memcpy((void *)(video_char_overlay0 + 1), message, strlen(message));
+}
+
+void refresh_timestamp(){
+	time_t rawtime;
+	struct tm * timeinfo;
+	//char message[80];
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	char message[80];
+	strftime(message, 80, "time: %x - %I:%M%p", timeinfo);
+	//#define OVERLAY_OFFSET 1
+	memcpy((void *)(video_char_overlay0 + 14), message, strlen(message));
 }
 
 /// --- event based control flow helpers ---
@@ -86,6 +114,10 @@ int main(void)
 
 	enable_dma(NULL);
 
+	int photo_count = 0;
+	set_photo_count(0);
+
+	refresh_timestamp();
 
 	while (1) {
 
@@ -95,7 +127,11 @@ int main(void)
 		);
 
 		if (!dma_enabled()) {
+
+			photo_count += 1;
+			set_photo_count(photo_count);
 			
+			// copy yhe memroy out so it can be tralsted on return
 			memcpy(buffer, (pixel_t*)Video_Mem_ptr, buffer_size);
 
 			// apply the filters and transforms while writing the image back to the video memory			

@@ -24,6 +24,7 @@ typedef struct {
 typedef pixel_t (*filter_t)(pixel_t);
 typedef pos_t (*transform_t)(pos_t, uint16_t width, uint16_t height);
 
+// effects_t
 typedef struct {
     uint16_t width;
     uint16_t height;
