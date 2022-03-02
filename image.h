@@ -8,9 +8,9 @@
 
 /// a type that represent one rgb565 encoded pixel
 typedef struct {
-    uint16_t r:5;
-    uint16_t g:6;
     uint16_t b:5;
+    uint16_t g:6;
+    uint16_t r:5;
 } pixel_t;
 
 // x y coordinate of a pixel
@@ -56,10 +56,14 @@ static const pixel_t black = {
 
 // --- Stage 1 --
 
-void apply_effects(pixel_t* source, pixel_t* dest,  effects_t effects);
-
-// @protocol: transform_t
-pos_t mirror_x_transform(pos_t todo);
+/// applies a set of filters and transforms to an image while writing it
+/// out to a destination out to a separate buffer. The source and destination
+/// cannot overlap (or be the same buffer).
+/// @param source the source image
+/// @param dest the destination image
+/// @param filters the filters to apply, each can be null or a null temrinated list of filter functions (must conformt to the filter_t type)
+/// @param transforms the transforms to apply, each can be null or a null temrinated list of transform functions (must conformt to the transform_t type)
+void apply_effects(pixel_t* source,   pixel_t* dest,  effects_t effects);
 
 // useses a global average filter between the three pixels
 // subjexct to change
@@ -71,7 +75,12 @@ pixel_t bw_filter(pixel_t pix);
 // @protocol: filter_t
 pixel_t invert_filter(pixel_t);
 
+// --- stage 2 ---
 
-void do_memory_shit(effects_t effects);
+// TODO: doc comment for this function
+pos_t mirror_x_transform(pos_t pos, uint16_t width, uint16_t height);
+
+// TODO: doc comment for this function
+pos_t mirror_y_transform(pos_t pos, uint16_t width, uint16_t height);
 
 #endif

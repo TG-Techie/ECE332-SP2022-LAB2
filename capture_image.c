@@ -1,21 +1,37 @@
-// #include "address_map_arm.h"
-
-#define KEY_BASE              0xFF200050
-#define VIDEO_IN_BASE         0xFF203060
-#define FPGA_ONCHIP_BASE      0xC8000000
-
 #include "stdio.h"
-// #include "stdlib.h"
-// #include "string.h"
+#include "stdlib.h"
 #include "stdbool.h"
+#include "string.h"
 
 #include "image.h"
 #include "callback.h"
+
+
+/// --- CUSTOMIZABLE ---
+
+// filters:
+static const filter_t filters[] = {NULL};
+// - bw_filter
+// - invert_filter
+// - MUST BE null terminated
+
+// transforms:
+static const transform_t transforms[] = {&mirror_y_transform, NULL};
+// - mirror_x_transform
+// - mirror_y_transform
+// - MUST BE null terminated
+
+/// --- peripherals ---
+#define KEY_BASE              0xFF200050
+#define VIDEO_IN_BASE         0xFF203060
+#define FPGA_ONCHIP_BASE      0xC8000000
 
 static volatile int * KEY_ptr			= (int *) KEY_BASE; // key peripheral 
 static volatile int * Video_In_DMA_ptr	= (int *) VIDEO_IN_BASE; // the peripheral
 static volatile short * Video_Mem_ptr	= (short *) FPGA_ONCHIP_BASE; // vga output memory location
 
+
+/// --- dma control and related callbacks ---
 
 void enable_dma() {
 	*(Video_In_DMA_ptr + 3) = 0x4;
@@ -41,15 +57,7 @@ void toggle_dma() {
 	}
 }
 
-/* This program demonstrates the use of the D5M camera with the DE1-SoC Board
- * It performs the following: 
- * 	1. Capture one frame of video when any key is pressed.
- * 	2. Display the captured frame when any key is pressed.		  
-*/
-/* Note: Set the switches SW1 and SW2 to high and rest of the switches to low for correct exposure timing while compiling and the loading the program in the Altera Monitor program.
-*/
-
-
+/// --- event based control flow helpers ---
 
 void wait_for_keypress(uint8_t mask, callback_t onpress) {
 	while(!(*KEY_ptr & mask)) {
@@ -69,9 +77,13 @@ void poll_for_keypress(uint8_t mask, callback_t onpress) {
 	return;
 }
 
+/// --- main (duh?) ---
 
 int main(void)
 {	
+	static const int buffer_size =  649*480*sizeof(pixel_t);
+	pixel_t* buffer = malloc(buffer_size);
+
 	enable_dma(NULL);
 
 
@@ -83,16 +95,19 @@ int main(void)
 		);
 
 		if (!dma_enabled()) {
-			// TODO: Copy the video memory to the image buffer for the source arg to this function
-			filter_t filters[] = {&bw_filter, &invert_filter, NULL};
+			
+			memcpy(buffer, (pixel_t*)Video_Mem_ptr, buffer_size);
+
+			// apply the filters and transforms while writing the image back to the video memory			
 			apply_effects(
-				(pixel_t*)Video_Mem_ptr,
+				buffer,
 				(pixel_t*)Video_Mem_ptr, 
 				(effects_t){
 					.width = 320,
 					.height = 240,
 					.filters = filters,
-					.transforms = NULL,
+					.transforms = transforms,
+
 				}
 			);
 		}
@@ -130,4 +145,6 @@ int main(void)
 		// enable_dma();
 
 	}
+
+	free(buffer);
 }

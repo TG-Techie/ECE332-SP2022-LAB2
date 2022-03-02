@@ -11,10 +11,6 @@
 
 // --- stage 1---
 
-pos_t mirror_x_transform(pos_t pix) {
-    return pix;
-}
-
 pixel_t bw_filter(pixel_t pix) {
     u8 r = pix.r << 3;
     u8 g = pix.g << 2;
@@ -39,7 +35,7 @@ pixel_t invert_filter(pixel_t pix) {
 
 
 
-void apply_effects(pixel_t* source, pixel_t* dest,  effects_t effects) {
+void apply_effects(pixel_t* source,   pixel_t* dest,  effects_t effects) {
 
 	int y;
 	for (y = 0; y < effects.height; y++) {
@@ -57,23 +53,44 @@ void apply_effects(pixel_t* source, pixel_t* dest,  effects_t effects) {
                 }
             }
 
-            // //apply each transform if a list of transforms is provided
-            // if (effects.transforms != NULL) {
-            //     int idx; // index of the currently active transform, null terminated
-            //     for (idx = 0; effects.transforms[idx]; idx++) {
-            //         pos = effects.transforms[idx](pos, effects.width, effects.height);
-            //     }
-            // }
+            //apply each transform if a list of transforms is provided
+            if (effects.transforms != NULL) {
+                int idx; // index of the currently active transform, null terminated
+                for (idx = 0; effects.transforms[idx]; idx++) {
+                    pos = effects.transforms[idx](pos, effects.width, effects.height);
+                }
+            }
 			
 			// // if the pixel was transformed, out of the image bounds
             // // skip writing that pixel
-			// if (pos.x >= effects.width || pos.y >= effects.height) {
-            //     continue;
-            // }
+			if (pos.x >= effects.width || pos.y >= effects.height) {
+                continue;
+            }
+
+            // if the source and destination are the same
+            // write all red to the destination instead
+            if (source == dest) {
+                pix = red;
+            }
 
             *(dest + (pos.y << 9) + pos.x) = pix;
 		}
 	}
+}
+
+// --- stage 2 ---
+pos_t mirror_x_transform(pos_t pos, uint16_t width, uint16_t height) {
+    return (pos_t){
+        .x = width - pos.x - 1,
+        .y = pos.y,
+    };
+}
+
+pos_t mirror_y_transform(pos_t pos, uint16_t width, uint16_t height) {
+    return (pos_t){
+        .x = pos.x,
+        .y = height - pos.y - 1,
+    };
 }
 
 // undefine conveinice defines
