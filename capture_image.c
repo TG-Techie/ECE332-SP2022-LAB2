@@ -7,8 +7,15 @@
 #include "image.h"
 #include "callback.h"
 
+// - internal - global buffer for image processing
+#define BUFFER_SIZE (size_t)(649*480*sizeof(pixel_t))
+pixel_t buffer[BUFFER_SIZE] = {0};
+
 
 /// --- CUSTOMIZABLE ---
+
+// time zone for timestamp function
+#define EST (+7)
 
 // filters:
 static const filter_t filters[] = {NULL};
@@ -72,16 +79,23 @@ void set_photo_count(int count) {
 	memcpy((void *)(video_char_overlay0 + 1), message, strlen(message));
 }
 
+// TODO: docs go here
 void refresh_timestamp(){
 	time_t rawtime;
-	struct tm * timeinfo;
-	//char message[80];
+	
+	// get the current time from the system
 	time(&rawtime);
-	timeinfo = localtime(&rawtime);
 
-	char message[80];
-	strftime(message, 80, "time: %x - %I:%M%p", timeinfo);
-	//#define OVERLAY_OFFSET 1
+	// localize the time to EST anf format it for strftime
+	struct tm * info;
+	info = localtime(&rawtime);
+	info->tm_hour = (info->tm_hour+EST)%24; 
+
+	// make the formatted "string"
+	char message[30];
+	strftime(message, 30, "time: %x - %I:%M%p", info);
+
+	// write it to the character overlay peripheral 
 	memcpy((void *)(video_char_overlay0 + 14), message, strlen(message));
 }
 
@@ -109,8 +123,6 @@ void poll_for_keypress(uint8_t mask, callback_t onpress) {
 
 int main(void)
 {	
-	static const int buffer_size =  649*480*sizeof(pixel_t);
-	pixel_t* buffer = malloc(buffer_size);
 
 	enable_dma(NULL);
 
@@ -132,7 +144,7 @@ int main(void)
 			set_photo_count(photo_count);
 			
 			// copy yhe memroy out so it can be tralsted on return
-			memcpy(buffer, (pixel_t*)Video_Mem_ptr, buffer_size);
+			memcpy(buffer, (pixel_t*)Video_Mem_ptr, BUFFER_SIZE);
 
 			// apply the filters and transforms while writing the image back to the video memory			
 			apply_effects(
@@ -181,6 +193,4 @@ int main(void)
 		// enable_dma();
 
 	}
-
-	free(buffer);
 }
