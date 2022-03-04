@@ -46,10 +46,12 @@ static volatile char * video_char_overlay0 = (char*) FPGA_CHAR_START; // the FPG
 
 /// --- dma control and related callbacks ---
 
+//enabling video
 void enable_dma() {
 	*(Video_In_DMA_ptr + 3) = 0x4;
 }
 
+//disabling video
 void disable_dma() {
 	*(Video_In_DMA_ptr + 3) = 0x0;
 }
@@ -62,6 +64,7 @@ bool dma_disabled(void) {
 	return !dma_enabled();
 }
 
+//button press to turn video on after image capture or to capture image when video is on
 void toggle_dma() {
 	if (dma_enabled()) {
 		disable_dma(NULL);
@@ -72,6 +75,7 @@ void toggle_dma() {
 
 /// --- screen formatting ---
 
+//adds photo counter to top left of image
 void set_photo_count(int count) {
 	char message[] = "photos: %0d";
 	snprintf(message, strlen(message), message, count);
