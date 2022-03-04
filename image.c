@@ -2,22 +2,26 @@
 
 #include "image.h"
 
+//defining grayscale threshold for black and white filter
 #ifndef IMAGE_BW_BW_THRESHOLD
 #define IMAGE_BW_BW_THRESHOLD (uint8_t) 64
 #endif
 
-// conveinice defines, undefined at the bottom of the file 
+// convenience defines, undefined at the bottom of the file 
 #define u8 uint8_t
 
 // --- stage 1---
 
+//defining pixel changes for black and white filter 
 pixel_t bw_filter(pixel_t pix) {
-    u8 r = pix.r << 3;
+    u8 r = pix.r << 3; 
     u8 g = pix.g << 2;
     u8 b = pix.b << 3;
 
-    u8 avg = (r/3 + g/3 + b/3);
+    u8 avg = (r/3 + g/3 + b/3); //grayscale equation 
 
+    //determining whether or not pixels should be set to black or white based on
+    //the grayscale average comparison to our set threshold 
     if (avg >= IMAGE_BW_BW_THRESHOLD) {
         return white;
     } else {
@@ -25,6 +29,7 @@ pixel_t bw_filter(pixel_t pix) {
     }
 }
 
+//defining pixel changes for inversion filter 
 pixel_t invert_filter(pixel_t pix) {
     return (pixel_t){
         .r = white.r - pix.r,
@@ -34,9 +39,8 @@ pixel_t invert_filter(pixel_t pix) {
 }
 
 
-
+//function to apply desired effect onto the image captured
 void apply_effects(pixel_t* source,   pixel_t* dest,  effects_t effects) {
-
 	int y;
 	for (y = 0; y < effects.height; y++) {
 		int x;
