@@ -14,9 +14,9 @@
 
 //defining pixel changes for black and white filter 
 pixel_t bw_filter(pixel_t pix) {
-    u8 r = pix.r << 3; 
-    u8 g = pix.g << 2;
-    u8 b = pix.b << 3;
+    u8 r = pix.r << 3;
+    u8 g = pix.g << 2; 
+    u8 b = pix.b << 3; 
 
     u8 avg = (r/3 + g/3 + b/3); //grayscale equation 
 
@@ -42,10 +42,12 @@ pixel_t invert_filter(pixel_t pix) {
 //function to apply desired effect onto the image captured
 void apply_effects(pixel_t* source,   pixel_t* dest,  effects_t effects) {
 	int y;
+	//while the pixels are within bounds
 	for (y = 0; y < effects.height; y++) {
 		int x;
 		for (x = 0; x < effects.width; x++) {
             // TODO, de-param for width and height sizes
+			//writing pixels onto board????
 			pixel_t pix = *(source + (y << 9) + x);
             pos_t pos = (pos_t){.x = x, .y = y};
 
@@ -83,6 +85,9 @@ void apply_effects(pixel_t* source,   pixel_t* dest,  effects_t effects) {
 }
 
 // --- stage 2 ---
+
+//defining position of x to mirror the image: 
+//y-coordinate of pixel stays the same, x-coordinate should be subtracted from the pixel width-1
 pos_t mirror_x_transform(pos_t pos, uint16_t width, uint16_t height) {
     return (pos_t){
         .x = width - pos.x - 1,
@@ -90,6 +95,8 @@ pos_t mirror_x_transform(pos_t pos, uint16_t width, uint16_t height) {
     };
 }
 
+//defining position of y to mirror the image: 
+//x-coordinate of pixel stays the same, y-coordinate should be subtracted from the pixel height-1
 pos_t mirror_y_transform(pos_t pos, uint16_t width, uint16_t height) {
     return (pos_t){
         .x = pos.x,
