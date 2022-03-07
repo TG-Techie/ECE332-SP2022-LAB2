@@ -32,12 +32,14 @@ void enable_video() {
 }
 
 void disable_video() {
+
 	*(Video_In_DMA_ptr + 3) = 0x0;
 }
 
 bool video_enabled(void) {
 	return (*(Video_In_DMA_ptr + 3) & 0x4) == 0x4;
 }
+
 
 void toggle_video() {
 	if (video_enabled()) {
@@ -61,6 +63,7 @@ void save_snapshot() {
 
 /// --- screen formatting ---
 
+//adds photo counter to top left of image
 void set_photo_count(int count) {
 	char message[] = "photos: %0d";
 	snprintf(message, strlen(message), message, count);
