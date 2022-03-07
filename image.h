@@ -1,4 +1,3 @@
-
 #ifndef IMAGE_H
 #define IMAGE_H
 
@@ -75,6 +74,10 @@ pixel_t bw_filter(pixel_t pix);
 // takes the inverse of the pixel, 5 red becomes 64-5 red
 // @protocol: filter_t
 pixel_t invert_filter(pixel_t);
+
+// inverst a black and white filter (inverts the black and white)
+// @protocol: filter_t
+pixel_t bw_invert_filter(pixel_t);
 
 // --- stage 2 ---
 

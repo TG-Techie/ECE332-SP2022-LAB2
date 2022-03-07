@@ -5,29 +5,10 @@
 #include <time.h>
 
 #include "image.h"
-#include "callback.h"
 
-// - internal - global buffer for image processing
-#define BUFFER_SIZE (size_t)(649*480*sizeof(pixel_t))
-pixel_t buffer[BUFFER_SIZE] = {0};
-
-
-/// --- CUSTOMIZABLE ---
-
+/// --- defs / etc ---
 // time zone for timestamp function
 #define EST (+7)
-
-// filters:
-static const filter_t filters[] = {NULL};
-// - bw_filter
-// - invert_filter
-// - MUST BE null terminated
-
-// transforms:
-static const transform_t transforms[] = {&mirror_y_transform, NULL};
-// - mirror_x_transform
-// - mirror_y_transform
-// - MUST BE null terminated
 
 /// --- peripherals ---
 #define KEY_BASE              0xFF200050
@@ -46,31 +27,38 @@ static volatile char * video_char_overlay0 = (char*) FPGA_CHAR_START; // the FPG
 
 /// --- dma control and related callbacks ---
 
-//enabling video
-void enable_dma() {
+void enable_video() {
 	*(Video_In_DMA_ptr + 3) = 0x4;
 }
 
-//disabling video
-void disable_dma() {
+void disable_video() {
+
 	*(Video_In_DMA_ptr + 3) = 0x0;
 }
 
-bool dma_enabled(void) {
+bool video_enabled(void) {
 	return (*(Video_In_DMA_ptr + 3) & 0x4) == 0x4;
 }
 
-bool dma_disabled(void) {
-	return !dma_enabled();
+
+void toggle_video() {
+	if (video_enabled()) {
+		disable_video(NULL);
+	} else {
+		enable_video(NULL);
+	}
 }
 
-//button press to turn video on after image capture or to capture image when video is on
-void toggle_dma() {
-	if (dma_enabled()) {
-		disable_dma(NULL);
-	} else {
-		enable_dma(NULL);
-	}
+/// --- image saving and utils ---
+// - internal - global buffer for image processing
+#define SNAPSHOT_SIZE_BYTES (size_t)(649*480*sizeof(pixel_t))
+pixel_t snapshot_buffer[SNAPSHOT_SIZE_BYTES] = {0};
+#define video_memory (pixel_t*)Video_Mem_ptr
+
+// TODO: docs
+void save_snapshot() {
+	// copy the memroy out so it can be tralsted on return
+	memcpy(snapshot_buffer, video_memory, SNAPSHOT_SIZE_BYTES);
 }
 
 /// --- screen formatting ---
@@ -105,96 +93,107 @@ void refresh_timestamp(){
 
 /// --- event based control flow helpers ---
 
-void wait_for_keypress(uint8_t mask, callback_t onpress) {
-	while(!(*KEY_ptr & mask)) {
-		// wait for keypress
-	}
-	while(*KEY_ptr & mask) {
-		// wait for key release
-	}
-	callback_call(onpress);
-	return;
+typedef uint8_t keys_t;
+
+typedef enum key_code {
+	bw_key 			= 1<<0,
+	bw_invert_key	= 1<<1,
+	mirror_x_key 	= 1<<2,
+	mirror_y_key 	= 1<<3,
+	any_key 		= bw_key | bw_invert_key | mirror_x_key | mirror_y_key,
+	key_mask 		= any_key,
+} key_code_t;
+
+bool key_pressed() {
+	return *KEY_ptr != 0;
 }
 
-void poll_for_keypress(uint8_t mask, callback_t onpress) {
-	if(*KEY_ptr & mask) {
-		callback_call(onpress);
+key_code_t wait_for_release() {
+	// while(!(*KEY_ptr & mask)) {
+	// 	// wait for keypress
+	// }
+	keys_t pressed = pressed = *KEY_ptr;
+	while (*KEY_ptr & pressed) {
+		// wait for key release
 	}
-	return;
+	return pressed & key_mask;
+}
+
+key_code_t wait_for_press() {
+	while (!key_pressed()) {}
+	return wait_for_release();
+}
+
+// TODO: docs go here, note taht the filter and transfrom are return destination pointers 
+void effects_for_key(key_code_t key, filter_t* filter_p, transform_t* transform_p) {
+	key = key & key_mask;
+
+	switch (key) {
+	case bw_key:
+		*filter_p = &bw_filter;
+		break;
+	case bw_invert_key:
+		*filter_p = &bw_invert_filter;
+		break;
+	case mirror_x_key:
+		*transform_p = &mirror_x_transform;
+		break;
+	case mirror_y_key:
+		*transform_p = &mirror_y_transform;
+		break;
+	default:
+		break;
+	}
 }
 
 /// --- main (duh?) ---
 
-int main(void)
-{	
+int main(void) {	
+	// initialize the image transfer 
+	enable_video();
 
-	enable_dma(NULL);
-
+	// setup the stateful variables
 	int photo_count = 0;
-	set_photo_count(0);
 
-	refresh_timestamp();
+	// main loop
+	for (;;) {
+		if (video_enabled()) {
+			refresh_timestamp();
+		}
 
-	while (1) {
 
-		wait_for_keypress(
-			0x1,
-			(callback_t){ .func = &toggle_dma, .arg = NULL}
-		);
-
-		if (!dma_enabled()) {
-
+		if (key_pressed()) {
+			// capture the key press
+			key_code_t key_code = wait_for_release();
+			
+			// take the photo, save it
+			disable_video();
+			save_snapshot();
+			// update the photo count accordingly
 			photo_count += 1;
 			set_photo_count(photo_count);
 			
-			// copy yhe memroy out so it can be tralsted on return
-			memcpy(buffer, (pixel_t*)Video_Mem_ptr, BUFFER_SIZE);
+			// create the list of effects to apply
+			filter_t filters[] = {NULL, NULL};
+			transform_t transforms[] = {NULL, NULL};
+			effects_for_key(key_code, &filters[0], &transforms[0]);
 
-			// apply the filters and transforms while writing the image back to the video memory			
+			// apply the effects and display it back into the video memory
 			apply_effects(
-				buffer,
-				(pixel_t*)Video_Mem_ptr, 
-				(effects_t){
+	 			snapshot_buffer,
+				video_memory, 
+				(effects_t) {
 					.width = 320,
 					.height = 240,
 					.filters = filters,
 					.transforms = transforms,
-
 				}
 			);
+
+			// wait here to re-enable the video capture so 
+			// the timestamp and photo count don't change
+			wait_for_press();
+			enable_video();
 		}
-
-		// while (!dma_enabled()) {
-		// 	poll_for_keypress(0x1, (callback_t){ .func = &toggle_dma, .arg=NULL});
-
-		// }
-			
-
-
-
-		// enable_dma();				// Enable the video
-		// // show the video until a key is pressed to capture a frame
-		// for (;;) {
-		// 	if ( ! (*KEY_ptr == 0))					// check if any KEY was pressed
-		// 	{
-		// 		disable_dma();			// Disable the video to capture one frame
-		// 		while (*KEY_ptr != 0) {}				// wait for pushbutton KEY release
-		// 		break;
-		// 	}
-		// }
-
-		// // display that frame until a key is pressed again
-		// for (;;) {
-		// 	if ( ! (*KEY_ptr == 0))					// check if any KEY was pressed
-		// 	{
-		// 		break;
-		// 	}
-		// }
-	
-		// do_memory_shit();
-
-		// printf("reenable dma\n");
-		// enable_dma();
-
 	}
 }

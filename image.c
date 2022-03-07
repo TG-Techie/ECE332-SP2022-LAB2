@@ -39,6 +39,10 @@ pixel_t invert_filter(pixel_t pix) {
 }
 
 
+pixel_t bw_invert_filter(pixel_t pix) {
+    return invert_filter(bw_filter(pix));
+}
+
 //function to apply desired effect onto the image captured
 void apply_effects(pixel_t* source,   pixel_t* dest,  effects_t effects) {
 	int y;
