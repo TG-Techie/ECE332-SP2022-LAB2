@@ -29,7 +29,7 @@
 #include "video.h"
 
 int main(void) {	
-	// initialize the image transfer and statful values for the images
+	// initialize the image transfer and stateful values for the images
 	enable_video();
 	int photo_count = 0;
 
