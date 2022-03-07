@@ -94,42 +94,12 @@ typedef uint8_t keys_t;
 
 typedef enum key_code {
 	bw_key 			= 1<<0,
-	invert_key 		= 1<<1,
+	bw_invert_key	= 1<<1,
 	mirror_x_key 	= 1<<2,
 	mirror_y_key 	= 1<<3,
-	any_key 		= bw_key | invert_key | mirror_x_key | mirror_y_key,
+	any_key 		= bw_key | bw_invert_key | mirror_x_key | mirror_y_key,
 	key_mask 		= any_key,
 } key_code_t;
-
-// /// check if a key in a set of allowed keys(a mask) is pressed and return the key is pressed
-// /// @param mask: the allowed keys
-// /// @return the key pressed (bit position)
-// keys_t poll_for_pressed(uint8_t mask) {
-// 	return *KEY_ptr & (mask & any_key);
-// }
-
-// /// TODO: docs go here
-// void wait_for_release_of(keys_t held) {
-// 	// wait for key release
-// 	while(*KEY_ptr & held) {}
-// }
-
-// /// wait indefinately for a keypress and return the key as a bit(s) pressed
-// /// for the given allowed keys (as a mask)
-// /// @param mask: the allowed keys
-// /// @return the key pressed (bit position)
-// keys_t wait_until_pressed(uint8_t mask) {
-// 	keys_t pressed = 0;
-
-// 	// wait for keypress
-// 	while(!pressed) {
-// 		pressed = poll_for_pressed(mask);
-// 	}
-
-// 	wait_for_release_of(pressed);
-
-// 	return pressed & any_key;
-// }
 
 bool key_pressed() {
 	return *KEY_ptr != 0;
@@ -159,8 +129,8 @@ void effects_for_key(key_code_t key, filter_t* filter_p, transform_t* transform_
 	case bw_key:
 		*filter_p = &bw_filter;
 		break;
-	case invert_key:
-		*filter_p = &invert_filter;
+	case bw_invert_key:
+		*filter_p = &bw_invert_filter;
 		break;
 	case mirror_x_key:
 		*transform_p = &mirror_x_transform;

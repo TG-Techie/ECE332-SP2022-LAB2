@@ -33,7 +33,9 @@ pixel_t invert_filter(pixel_t pix) {
     };
 }
 
-
+pixel_t bw_invert_filter(pixel_t pix) {
+    return invert_filter(bw_filter(pix));
+}
 
 void apply_effects(pixel_t* source,   pixel_t* dest,  effects_t effects) {
 

@@ -75,6 +75,10 @@ pixel_t bw_filter(pixel_t pix);
 // @protocol: filter_t
 pixel_t invert_filter(pixel_t);
 
+// inverst a black and white filter (inverts the black and white)
+// @protocol: filter_t
+pixel_t bw_invert_filter(pixel_t);
+
 // --- stage 2 ---
 
 // TODO: doc comment for this function
