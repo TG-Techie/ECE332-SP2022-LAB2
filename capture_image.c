@@ -1,179 +1,57 @@
-#include <stdio.h>
+// MIT License
+
+// Copyright (C) 2022 Jonah "Jay" Yolles-Murphy, Khadija Ben-Neticha
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy of
+// this software and associated documentation files (the "Software"), to deal in 
+// the Software without restriction, including without limitation the rights to 
+// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+// of the Software, and to permit persons to whom the Software is furnished to 
+// do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in 
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// system includes
 #include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <time.h>
-
-#include "image.h"
-
-/// --- defs / etc ---
-// time zone for timestamp function
-#define EST (+7)
-
-/// --- peripherals ---
-#define KEY_BASE              0xFF200050
-#define VIDEO_IN_BASE         0xFF203060
-#define FPGA_ONCHIP_BASE      0xC8000000
-#define CHAR_BUF_CTRL_BASE		0xFF203030
-#define FPGA_CHAR_START			0xC9000000
-
-
-static volatile int * KEY_ptr			= (int *) KEY_BASE; // key peripheral 
-static volatile int * Video_In_DMA_ptr	= (int *) VIDEO_IN_BASE; // the peripheral
-static volatile short * Video_Mem_ptr	= (short *) FPGA_ONCHIP_BASE; // vga output memory location
-
-static volatile int * video_char_ctrl0  = (int *) CHAR_BUF_CTRL_BASE; // the FPGA
-static volatile char * video_char_overlay0 = (char*) FPGA_CHAR_START; // the FPGA
-
-/// --- dma control and related callbacks ---
-
-void enable_video() {
-	*(Video_In_DMA_ptr + 3) = 0x4;
-}
-
-void disable_video() {
-
-	*(Video_In_DMA_ptr + 3) = 0x0;
-}
-
-bool video_enabled(void) {
-	return (*(Video_In_DMA_ptr + 3) & 0x4) == 0x4;
-}
-
-
-void toggle_video() {
-	if (video_enabled()) {
-		disable_video(NULL);
-	} else {
-		enable_video(NULL);
-	}
-}
-
-/// --- image saving and utils ---
-// - internal - global buffer for image processing
-#define SNAPSHOT_SIZE_BYTES (size_t)(649*480*sizeof(pixel_t))
-pixel_t snapshot_buffer[SNAPSHOT_SIZE_BYTES] = {0};
-#define video_memory (pixel_t*)Video_Mem_ptr
-
-// TODO: docs
-void save_snapshot() {
-	// copy the memroy out so it can be tralsted on return
-	memcpy(snapshot_buffer, video_memory, SNAPSHOT_SIZE_BYTES);
-}
-
-/// --- screen formatting ---
-
-//adds photo counter to top left of image
-void set_photo_count(int count) {
-	char message[] = "photos: %0d";
-	snprintf(message, strlen(message), message, count);
-
-	memcpy((void *)(video_char_overlay0 + 1), message, strlen(message));
-}
-
-// TODO: docs go here
-void refresh_timestamp(){
-	time_t rawtime;
-	
-	// get the current time from the system
-	time(&rawtime);
-
-	// localize the time to EST anf format it for strftime
-	struct tm * info;
-	info = localtime(&rawtime);
-	info->tm_hour = (info->tm_hour+EST)%24; 
-
-	// make the formatted "string"
-	char message[30];
-	strftime(message, 30, "time: %x - %I:%M%p", info);
-
-	// write it to the character overlay peripheral 
-	memcpy((void *)(video_char_overlay0 + 14), message, strlen(message));
-}
-
-/// --- event based control flow helpers ---
-
-typedef uint8_t keys_t;
-
-typedef enum key_code {
-	bw_key 			= 1<<0,
-	bw_invert_key	= 1<<1,
-	mirror_x_key 	= 1<<2,
-	mirror_y_key 	= 1<<3,
-	any_key 		= bw_key | bw_invert_key | mirror_x_key | mirror_y_key,
-	key_mask 		= any_key,
-} key_code_t;
-
-bool key_pressed() {
-	return *KEY_ptr != 0;
-}
-
-key_code_t wait_for_release() {
-	// while(!(*KEY_ptr & mask)) {
-	// 	// wait for keypress
-	// }
-	keys_t pressed = pressed = *KEY_ptr;
-	while (*KEY_ptr & pressed) {
-		// wait for key release
-	}
-	return pressed & key_mask;
-}
-
-key_code_t wait_for_press() {
-	while (!key_pressed()) {}
-	return wait_for_release();
-}
-
-// TODO: docs go here, note taht the filter and transfrom are return destination pointers 
-void effects_for_key(key_code_t key, filter_t* filter_p, transform_t* transform_p) {
-	key = key & key_mask;
-
-	switch (key) {
-	case bw_key:
-		*filter_p = &bw_filter;
-		break;
-	case bw_invert_key:
-		*filter_p = &bw_invert_filter;
-		break;
-	case mirror_x_key:
-		*transform_p = &mirror_x_transform;
-		break;
-	case mirror_y_key:
-		*transform_p = &mirror_y_transform;
-		break;
-	default:
-		break;
-	}
-}
-
-/// --- main (duh?) ---
+// local includes
+#include "peripherals.h"
+#include "effects.h"
+#include "keys.h"
+#include "video.h"
 
 int main(void) {	
-	// initialize the image transfer 
+	// initialize the image transfer and statful values for the images
 	enable_video();
-
-	// setup the stateful variables
 	int photo_count = 0;
 
-	// main loop
+	// ----- the nitty gritty -----
 	for (;;) {
+		// make sure the timestamp is up to date when not paused on an image
 		if (video_enabled()) {
 			refresh_timestamp();
 		}
 
-
 		if (key_pressed()) {
 			// capture the key press
-			key_code_t key_code = wait_for_release();
+			keys_t key_code = wait_for_release();
 			
 			// take the photo, save it
 			disable_video();
 			save_snapshot();
-			// update the photo count accordingly
-			photo_count += 1;
-			set_photo_count(photo_count);
 			
-			// create the list of effects to apply
+			photo_count += 1;
+			refresh_photo_count(photo_count);
+			
+			// create the list of effects to apply based on the key pressed, here we're putting them right into the list
 			filter_t filters[] = {NULL, NULL};
 			transform_t transforms[] = {NULL, NULL};
 			effects_for_key(key_code, &filters[0], &transforms[0]);
@@ -190,8 +68,7 @@ int main(void) {
 				}
 			);
 
-			// wait here to re-enable the video capture so 
-			// the timestamp and photo count don't change
+			// wait here to re-enable the video capture so the timestamp and photo count don't change
 			wait_for_press();
 			enable_video();
 		}

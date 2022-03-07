@@ -14,6 +14,8 @@
         <source_files>
             <source_file filepath="true">capture_image.c</source_file>
             <source_file filepath="true">image.c</source_file>
+            <source_file filepath="true">keys.c</source_file>
+            <source_file filepath="true">video.c</source_file>
         </source_files>
         <options>
             <compiler_flags>-g -O1</compiler_flags>

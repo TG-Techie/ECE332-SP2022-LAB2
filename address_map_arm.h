@@ -1,3 +1,7 @@
+// No copyright or license, this code is modified from pulbic domain exmaple code
+
+#pragma once
+
 /* This files provides address values that exist in the system */
 
 #define BOARD						"DE1-SoC"
