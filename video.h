@@ -26,12 +26,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// ----- shared pixel respresentation -----
+// ----- shared pixel representation -----
 
 /// @brief A struct representing a rgb565 endcoded pixel. 
 /// 
-/// This uses bitfeild to seaprate the red, green, and blue channels
-/// from each other. Note the channels do not all chare the same max value; 
+/// This uses bitfield to separate the red, green, and blue channels
+/// from each other. Note the channels do not all share the same max value; 
 /// use the `white` constant to get the max value for each channel, eg `mypix.r / white.r`.
 typedef struct {
     uint16_t b:5;
@@ -52,11 +52,11 @@ static const pixel_t red    = {.r = 0x1f, .g = 0x00, .b = 0x00};
 /// Thus, to take a snapshot you to enable/disable the dma channel, this section provides
 /// utilities to do so.
 
-/// @brief Starts sreaming video formt eh camera the video capture system. 
+/// @brief Starts streaming video from the camera to the video capture system. 
 /// @return void
 void enable_video();
 
-/// @brief Stops streaming video from the camera the video capture system. 
+/// @brief Stops streaming video from the camera to the video capture system. 
 /// @return void
 void disable_video();
 
@@ -70,7 +70,7 @@ bool video_enabled(void);
 /// This section provides functions to save a snapshot of the current frame
 /// and save it to a global buffer for processing/effects later.
 
-/// @brief use for specifycng the size of the global buffer when copying memory 
+/// @brief use for specifying the size of the global buffer when copying memory 
 #define SNAPSHOT_SIZE_BYTES (size_t)(649*480*sizeof(pixel_t))
 
 /// @brief the video buffer used by the vga peripheral
@@ -91,6 +91,6 @@ void save_snapshot();
 /// @return void
 void refresh_photo_count(int count);
 
-/// @brief write the current time to the vga overlay buffer, in ESTS format
+/// @brief write the current time to the vga overlay buffer, in EST format
 /// @return void
 void refresh_timestamp();
