@@ -56,7 +56,7 @@ volatile pixel_t* const video_memory = (pixel_t * const)FPGA_ONCHIP_VIDEO_BASE;
 
 // TODO: docs
 void save_snapshot() {
-	// copy the memroy out so it can be tralsted on return
+	// copy the memory out so it can be translated on return
 	memcpy(snapshot_buffer, video_memory, SNAPSHOT_SIZE_BYTES);
 }
 
@@ -77,7 +77,7 @@ void refresh_timestamp(){
 	// get the current time from the system
 	time(&rawtime);
 
-	// localize the time to EST anf format it for strftime
+	// localize the time to EST and format it for strftime
 	struct tm * info;
 	info = localtime(&rawtime);
 	info->tm_hour = (info->tm_hour+EST)%24; 
