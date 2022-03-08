@@ -43,7 +43,7 @@ typedef enum {
 } key_code_t;
 
 /// @brief used to check if any button is pressed
-/// @note this onlt detects button presses, not releases. 
+/// @note this only detects button presses, not releases. 
 ///       use `wait_for_release` to detect button release and the pressed keys
 /// @return true if the button is pressed, false otherwise
 bool key_pressed();

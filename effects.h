@@ -55,12 +55,12 @@ typedef struct {
 ///
 /// @note the source destination and effects must be the same size
 /// @note the order of the effects is important, filters are applied before transforms.
-///       for each array the it applies each effect in ordef until it reaches a null terminator
+///       for each array it applies each effect in order until it reaches a null terminator
 ///
 /// @param source the source image
 /// @param dest the destination image
-/// @param filters the filters to apply, each can be null or a null temrinated list of filter functions (must conformt to the filter_t type)
-/// @param transforms the transforms to apply, each can be null or a null temrinated list of transform functions (must conformt to the transform_t type)
+/// @param filters the filters to apply, each can be null or a null terminated list of filter functions (must conform to the filter_t type)
+/// @param transforms the transforms to apply, each can be null or a null terminated list of transform functions (must conform to the transform_t type)
 /// @return none
 void apply_effects(const pixel_t* source,   pixel_t* dest,  effects_t effects);
 
