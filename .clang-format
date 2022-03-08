@@ -29,7 +29,7 @@ AllowShortBlocksOnASingleLine: 'false'
 AllowShortFunctionsOnASingleLine: InlineOnly
 BinPackArguments: 'false'
 BinPackParameters: 'false'
-ColumnLimit: '98'
+ColumnLimit: '120'
 ReflowComments: 'true'
 AlignTrailingComments: 'true'
 # POTENTIAL: PenaltyBreakAssignment: 100
