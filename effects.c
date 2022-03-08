@@ -34,7 +34,6 @@
 
 // ----- stage 1-----
 
-// defining pixel changes for black and white filter
 pixel_t bw_filter(pixel_t pix) {
     uint8_t r = pix.r << 3;
     uint8_t g = pix.g << 2;
@@ -69,19 +68,21 @@ pixel_t bw_invert_filter(pixel_t pix) {
 //  NOTE: BUILD FAIL: remove the const from this function and it's header prototype
 void apply_effects(const pixel_t* source, pixel_t* dest, effects_t effects) {
     int y;
-    // while the pixels are within bounds
+    // loop over every row
     for (y = 0; y < effects.height; y++) {
         int x;
+        // loop over every pixel in the row
         for (x = 0; x < effects.width; x++) {
-            // TODO, de-param for width and height sizes
-            // writing pixels onto board????
+            // get the pixel at the current x, y position, this will be mutated by effects
             pixel_t pix = *(source + (y << 9) + x);
-            pos_t pos   = (pos_t){.x = x, .y = y};
+
+            // the position of the pixel, this is meant to be mutated by transforms
+            pos_t pos = (pos_t){.x = x, .y = y};
 
             // apply each filter if a list of filters is provided
             if (effects.filters != NULL) {
                 int idx;  // index of the currently active filter, null terminated
-                for (idx = 0; effects.filters[idx]; idx++) {
+                for (idx = 0; effects.filters[idx] != NULL; idx++) {
                     pix = effects.filters[idx](pix);
                 }
             }
@@ -89,29 +90,27 @@ void apply_effects(const pixel_t* source, pixel_t* dest, effects_t effects) {
             // apply each transform if a list of transforms is provided
             if (effects.transforms != NULL) {
                 int idx;  // index of the currently active transform, null terminated
-                for (idx = 0; effects.transforms[idx]; idx++) {
+                for (idx = 0; effects.transforms[idx] != NULL; idx++) {
                     pos = effects.transforms[idx](pos, effects.width, effects.height);
                 }
             }
 
-            // // if the pixel was transformed, out of the image bounds
-            // // skip writing that pixel
+            // if the pixel was transformed outside of the image bounds, skip it
             if (pos.x >= effects.width || pos.y >= effects.height) {
                 continue;
             }
 
-            // if the source and destination are the same
-            // write all red to the destination instead
+            // if the source and destination are the same, make the whole image red
             if (source == dest) {
                 pix = red;
             }
 
+
+            // write the filtered pixel to the transformed destination
             *(dest + (pos.y << 9) + pos.x) = pix;
         }
     }
 }
-
-// ----- stage 2 -----
 
 // defining position of x to mirror the image:
 // y-coordinate of pixel stays the same, x-coordinate should be subtracted from the pixel width-1
